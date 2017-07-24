@@ -1,0 +1,14 @@
+<div>
+    {% if error %}
+        <p>{{ error }}</p>
+    {% endif %}
+    {% if app.user %}
+        <p>Hello {{ app.user.username }}! Your email is {{ app.user.email }}</p>
+        <p>Pls look your <a href="{{ url('repos' ) }}">repository</a></p>
+        <a href="{{ logout_path }}">Logout</a>
+    {% else %}
+        <ul>
+            <li><a href="{{ login_paths.github }}">Login with GitHub</a></li>
+        </ul>
+    {% endif %}
+</div>

@@ -1,0 +1,33 @@
+{% set difference = date(issue.created_at|date('c')).diff(date('now'|date('c'))) %}
+{% set leftHours = difference.h %}
+<div>
+    <div>{{ issue.title }} #{{ issue.number }}</div>
+    {% if issue.labels is defined %}
+        {% for label in issue.labels %}
+            <div style="background-color: #{{ label.color }}">{{ label.name }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div>{{ issue.state }}</div>
+    {% if issue.pull_request is defined %}
+        <div> opened by {{ issue.user.login }} {{ leftHours }} hours ago</div>
+    {% endif %}
+    <div>{{ issue.comments }} comment(s)</div>
+</div>
+
+<div class="comment">
+    <div>
+        <div><img src="{{ issue.user.avatar_url }}" width="100"/></div>
+        <div>{{ issue.user.login }} commented {{ leftHours }} hours ago</div>
+        <div>{{ issue.body }}</div>
+    </div>
+    {% for comment in comments %}
+        {% set difference = date(comment.created_at|date('c')).diff(date('now'|date('c'))) %}
+        {% set leftHours = difference.h %}
+        <div>
+            <div><img src="{{ comment.user.avatar_url }}" width="100"/></div>
+            <div>{{ issue.user.login }} commented {{ leftHours }} hours ago</div>
+            <div>{{ comment.body }}</div>
+        </div>
+    {% endfor %}
+</div>

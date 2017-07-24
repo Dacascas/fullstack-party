@@ -1,0 +1,7 @@
+<div>Repository:</div>
+<div>Please choose one:</div>
+<ul>
+{% for repo in repos %}
+    <li><a href="{{ url('repo', { repoId: repo['id'] } ) }}">{{ repo['name'] }}</a></li>
+{% endfor %}
+</ul>

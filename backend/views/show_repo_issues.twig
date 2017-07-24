@@ -1,0 +1,32 @@
+<div>Open {{ openCount }} Closed {{ closeCount }}</div>
+
+{% for issue in issues %}
+    {% set difference = date(issue.created_at|date('c')).diff(date('now'|date('c'))) %}
+    {% set leftHours = difference.h %}
+    <div>
+        <div>
+            <a href="{{ url('issue', { repoId: repoId, issueId: issue.number } ) }}">{{ issue.title }}</a>
+        </div>
+        {% if issue.labels is defined %}
+            {% for label in issue.labels %}
+                <div style="background-color: #{{ label.color }}">{{ label.name }}</div>
+            {% endfor %}
+        {% endif %}
+
+        {% if issue.pull_request is defined %}
+            <div>#{{ issue.number }} opened by {{ issue.user.login }} {{ leftHours }} hours ago</div>
+        {% endif %}
+        <div>Comment {{ issue.comments }}</div>
+    </div>
+{% endfor %}
+
+<ul>
+{% for key,page in paginator %}
+    {% if key == 'current' %}
+        <li>{{ page }}</li>
+    {% else %}
+        <li><a href="{{ url('repoPage', { repoId: repoId, page: page } ) }}">{{ key }}</a></li>
+    {% endif %}
+{% endfor %}
+</ul>
+
