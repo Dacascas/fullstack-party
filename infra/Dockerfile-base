@@ -1,0 +1,36 @@
+FROM php:7.1-fpm
+
+ENV LC_ALL en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US.UTF-8
+
+WORKDIR /data/www
+
+# not installed ext: amqp dev cli intl
+# not installed packages: language-pack-en-base
+RUN export LC_ALL=POSIX && apt-get update \
+    && apt-get install curl wget vim sudo mcrypt bc libmcrypt-dev build-essential \
+    software-properties-common debian-archive-keyring dialog net-tools locales \
+    libfreetype6-dev libjpeg62-turbo-dev libmcrypt-dev libpng-dev libxml2-dev \
+    openssh-client openssh-server zip git telnet -y \
+    && curl -sL https://deb.nodesource.com/setup_8.x -o nodesource_setup.sh \
+    && bash nodesource_setup.sh \
+    && apt-get install -y nodejs \
+    && update-rc.d ssh defaults \
+    && pecl install xdebug-2.5.5 redis \
+    && docker-php-ext-install -j$(nproc) pdo pdo_mysql bcmath opcache gd xml json mcrypt zip soap \
+    && docker-php-ext-enable xdebug redis \
+    && sed -i -e "s/# \($LANG.*\)/\1/" /etc/locale.gen \
+    && dpkg-reconfigure --frontend=noninteractive locales \
+    && update-locale LANG=$LANG \
+    && chown -R www-data:www-data /data \
+    && mkdir -p /var/www/.composer \
+    && chown -R www-data:www-data /var/www \
+    && wget https://getcomposer.org/composer.phar -O /usr/local/bin/composer \
+    && chmod +x /usr/local/bin/composer
+
+RUN apt-get install -y libjpeg-dev libjpeg62-turbo libpng-dev \
+    && docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ --with-png-dir=/usr/include/
+
+RUN docker-php-ext-install -j$(nproc) pdo pdo_mysql bcmath opcache gd xml json zip soap exif sockets \
+    && docker-php-ext-enable xdebug gd

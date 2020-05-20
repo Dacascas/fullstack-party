@@ -1,0 +1,26 @@
+FROM nginx:latest
+
+ARG USER
+ENV LC_ALL en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US.UTF-8
+
+COPY ./nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ./nginx/*.vhost.conf /etc/nginx/conf.d/
+
+COPY ./ssh/authorized_keys /root/.ssh/authorized_keys
+COPY ./ssh/id_rsa.pub /root/.ssh/id_rsa.pub
+COPY ./ssh/id_rsa /root/.ssh/id_rsa
+
+WORKDIR /data/www
+
+RUN export LC_ALL=POSIX && apt-get update \
+    && apt-get install -y locales curl vim sudo \
+    && sed -i -e "s/# \($LANG.*\)/\1/" /etc/locale.gen \
+    && dpkg-reconfigure --frontend=noninteractive locales \
+    && update-locale LANG=$LANG \
+    && chown -R www-data:www-data /data
+
+RUN sed -i "s/^\(user\|group\) = .*$/\1 = $USER/g" /etc/nginx/nginx.conf
+
+CMD ["nginx", "-g", "daemon off;"]

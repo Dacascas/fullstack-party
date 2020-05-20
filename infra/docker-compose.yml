@@ -1,0 +1,45 @@
+---
+version: '3'
+services:
+  my-php:
+    hostname: my-php
+    build:
+      context: .
+      dockerfile: Dockerfile-php
+    container_name: my-php
+    volumes:
+      - "./www:/data/www"
+    ports:
+      - "9000:9000"
+      - "9022:22"
+    networks:
+      my_net:
+        ipv4_address: 172.16.238.2
+
+  my-nginx:
+    hostname: nginx
+    build:
+      context: .
+      dockerfile: Dockerfile-nginx
+    container_name: my-nginx
+    ports:
+      - "8282:80"
+    links:
+      - my-php
+    volumes:
+      - "./www/app:/data/www/app:ro"
+    networks:
+      my_net:
+        ipv4_address: 172.16.238.1
+
+volumes:
+  app-vendors:
+
+networks:
+  my_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      -
+        subnet: 172.16.238.0/24
