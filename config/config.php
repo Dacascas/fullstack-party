@@ -9,8 +9,8 @@ return [
     'log.directory' => __DIR__ . '/../var/logs/',
     'cache_dir' => __DIR__ . '/../var/cache/prod',
 
-    'tesonet.api_versioning' => [
-        'product' => 'Tesonet test task',
+    'github_reader.api_versioning' => [
+        'product' => 'Github reader',
         'environment' => 'prod'
     ]
 ];

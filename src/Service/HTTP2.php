@@ -1,6 +1,6 @@
 <?php
 
-namespace Tesonet\Service;
+namespace Service;
 
 /**
  * Part of HTTP2
@@ -67,7 +67,7 @@ class HTTP2
         // RFC822 or RFC850
         $format = ini_get('y2k_compliance') ? 'D, d M Y' : 'l, d-M-y';
 
-        return gmdate($format .' H:i:s \G\M\T', $time);
+        return gmdate($format . ' H:i:s \G\M\T', $time);
     }
 
     /**
@@ -96,9 +96,9 @@ class HTTP2
      *  $dir = $langs[$neg];
      * </code>
      *
-     * @param array  $supported An associative array of supported languages,
+     * @param array $supported An associative array of supported languages,
      *                          whose values must evaluate to true.
-     * @param string $default   The default language to use if none is found.
+     * @param string $default The default language to use if none is found.
      *
      * @return string The negotiated language result or the supplied default.
      */
@@ -136,6 +136,63 @@ class HTTP2
     }
 
     /**
+     * Parses a weighed "Accept" HTTP header and matches it against a list
+     * of supported options
+     *
+     * @param string $header The HTTP "Accept" header to parse
+     * @param array $supported A list of supported values
+     *
+     * @return string|NULL a matched option, or NULL if no match
+     */
+    protected function matchAccept($header, $supported)
+    {
+        $matches = $this->sortAccept($header);
+        foreach ($matches as $key => $q) {
+            if (isset($supported[$key])) {
+                return $supported[$key];
+            }
+        }
+        // If any (i.e. "*") is acceptable, return the first supported format
+        if (isset($matches['*'])) {
+            return array_shift($supported);
+        }
+        return null;
+    }
+
+    /**
+     * Parses and sorts a weighed "Accept" HTTP header
+     *
+     * @param string $header The HTTP "Accept" header to parse
+     *
+     * @return array Sorted list of "accept" options
+     */
+    protected function sortAccept($header)
+    {
+        $matches = array();
+        foreach (explode(',', $header) as $option) {
+            $option = array_map('trim', explode(';', $option));
+
+            $l = strtolower($option[0]);
+            if (isset($option[1])) {
+                $q = (float)str_replace('q=', '', $option[1]);
+            } else {
+                $q = null;
+                // Assign default low weight for generic values
+                if ($l == '*/*') {
+                    $q = 0.01;
+                } elseif (substr($l, -1) == '*') {
+                    $q = 0.02;
+                }
+            }
+            // Unweighted values, get high weight by their position in the
+            // list
+            $matches[$l] = isset($q) ? $q : 1000 - count($matches);
+        }
+        arsort($matches, SORT_NUMERIC);
+        return $matches;
+    }
+
+    /**
      * Negotiates charset with the user's browser through the Accept-Charset
      * HTTP header.
      *
@@ -152,8 +209,8 @@ class HTTP2
      *  $charset = $http->negotiateCharset($charsets);
      * </code>
      *
-     * @param array  $supported An array of supported charsets
-     * @param string $default   The default charset to use if none is found.
+     * @param array $supported An array of supported charsets
+     * @param string $default The default charset to use if none is found.
      *
      * @return string The negotiated language result or the supplied default.
      * @author Philippe Jausions <jausions@php.net>
@@ -202,8 +259,8 @@ class HTTP2
      *  $mime = $http->negotiateMimeType($contentType);
      * </code>
      *
-     * @param array  $supported An associative array of supported MIME types.
-     * @param string $default   The default type to use if none match.
+     * @param array $supported An associative array of supported MIME types.
+     * @param string $default The default type to use if none match.
      *
      * @return string The negotiated MIME type result or the supplied default.
      * @author Philippe Jausions <jausions@php.net>
@@ -247,63 +304,6 @@ class HTTP2
     }
 
     /**
-     * Parses a weighed "Accept" HTTP header and matches it against a list
-     * of supported options
-     *
-     * @param string $header    The HTTP "Accept" header to parse
-     * @param array  $supported A list of supported values
-     *
-     * @return string|NULL a matched option, or NULL if no match
-     */
-    protected function matchAccept($header, $supported)
-    {
-        $matches = $this->sortAccept($header);
-        foreach ($matches as $key => $q) {
-            if (isset($supported[$key])) {
-                return $supported[$key];
-            }
-        }
-        // If any (i.e. "*") is acceptable, return the first supported format
-        if (isset($matches['*'])) {
-            return array_shift($supported);
-        }
-        return null;
-    }
-
-    /**
-     * Parses and sorts a weighed "Accept" HTTP header
-     *
-     * @param string $header The HTTP "Accept" header to parse
-     *
-     * @return array Sorted list of "accept" options
-     */
-    protected function sortAccept($header)
-    {
-        $matches = array();
-        foreach (explode(',', $header) as $option) {
-            $option = array_map('trim', explode(';', $option));
-
-            $l = strtolower($option[0]);
-            if (isset($option[1])) {
-                $q = (float) str_replace('q=', '', $option[1]);
-            } else {
-                $q = null;
-                // Assign default low weight for generic values
-                if ($l == '*/*') {
-                    $q = 0.01;
-                } elseif (substr($l, -1) == '*') {
-                    $q = 0.02;
-                }
-            }
-            // Unweighted values, get high weight by their position in the
-            // list
-            $matches[$l] = isset($q) ? $q : 1000 - count($matches);
-        }
-        arsort($matches, SORT_NUMERIC);
-        return $matches;
-    }
-
-    /**
      * Sends a "HEAD" HTTP command to a server and returns the headers
      * as an associative array.
      *
@@ -321,12 +321,12 @@ class HTTP2
      *     )
      * </code>
      *
-     * @param string  $url     A valid URL, e.g.: http://pear.php.net/credits.php
+     * @param string $url A valid URL, e.g.: http://pear.php.net/credits.php
      * @param integer $timeout Timeout in seconds (default = 10)
      *
      * @return array Returns associative array of response headers on success
      *
-     * @throws HTTP2_Exception          When connecting fails
+     * @throws Exception          When connecting fails
      * @throws InvalidArgumentException When the protocol is not uspported
      *
      * @see HTTP_Client::head()
@@ -339,17 +339,17 @@ class HTTP2
             $p = parse_url($this->absoluteURI($url));
         } elseif ($p['scheme'] != 'http') {
             throw new InvalidArgumentException(
-                'Unsupported protocol: '. $p['scheme']
+                'Unsupported protocol: ' . $p['scheme']
             );
         }
 
         $port = isset($p['port']) ? $p['port'] : 80;
 
         if (!$fp = @fsockopen($p['host'], $port, $eno, $estr, $timeout)) {
-            throw new HTTP2_Exception("Connection error: $estr ($eno)");
+            throw new \Exception("Connection error: $estr ($eno)");
         }
 
-        $path  = !empty($p['path']) ? $p['path'] : '/';
+        $path = !empty($p['path']) ? $p['path'] : '/';
         $path .= !empty($p['query']) ? '?' . $p['query'] : '';
 
         fputs($fp, "HEAD $path HTTP/1.0\r\n");
@@ -368,57 +368,13 @@ class HTTP2
             }
             if (($pos = strpos($line, ':')) !== false) {
                 $header = substr($line, 0, $pos);
-                $value  = trim(substr($line, $pos + 1));
+                $value = trim(substr($line, $pos + 1));
 
                 $headers[$header] = $value;
             }
         }
         fclose($fp);
         return $headers;
-    }
-
-    /**
-     * This function redirects the client. This is done by issuing
-     * a "Location" header and exiting if wanted.  If you set $rfc2616 to true
-     * HTTP will output a hypertext note with the location of the redirect.
-     *
-     * @param string $url     URL where the redirect should go to.
-     * @param bool   $exit    Whether to exit immediately after redirection.
-     * @param bool   $rfc2616 Wheter to output a hypertext note where we're
-     *                        redirecting to (Redirecting to
-     *                        <a href="...">...</a>.)
-     *
-     * @return boolean Returns TRUE on succes (or exits) or FALSE if headers
-     *                 have already been sent.
-     */
-    function redirect($url, $exit = true, $rfc2616 = false)
-    {
-        if (headers_sent()) {
-            return false;
-        }
-
-        $url = $this->absoluteURI($url);
-        header('Location: '. $url);
-
-        if ($rfc2616 && isset($_SERVER['REQUEST_METHOD'])
-            && $_SERVER['REQUEST_METHOD'] != 'HEAD'
-        ) {
-            echo '
-<p>Redirecting to: <a href="'.str_replace('"', '%22', $url).'">'
-                 .htmlspecialchars($url).'</a>.</p>
-<script type="text/javascript">
-//<![CDATA[
-if (location.replace == null) {
-    location.replace = location.assign;
-}
-location.replace("'.str_replace('"', '\\"', $url).'");
-// ]]>
-</script>';
-        }
-        if ($exit) {
-            exit;
-        }
-        return true;
     }
 
     /**
@@ -433,10 +389,10 @@ location.replace("'.str_replace('"', '\\"', $url).'");
      * particularly useful when redirecting a web browser using relative URIs
      * and to switch from HTTP to HTTPS, or vice-versa, at the same time.
      *
-     * @param string  $url      Absolute or relative URI the redirect should
+     * @param string $url Absolute or relative URI the redirect should
      *                          go to.
-     * @param string  $protocol Protocol to use when redirecting URIs.
-     * @param integer $port     A new port number.
+     * @param string $protocol Protocol to use when redirecting URIs.
+     * @param integer $port A new port number.
      *
      * @return string The absolute URI.
      * @author Philippe Jausions <Philippe.Jausions@11abacus.com>
@@ -452,12 +408,12 @@ location.replace("'.str_replace('"', '\\"', $url).'");
                 return $url;
             }
             if (!empty($protocol)) {
-                $url = $protocol .':'. end($array = explode(':', $url, 2));
+                $url = $protocol . ':' . end($array = explode(':', $url, 2));
             }
             if (!empty($port)) {
                 $url = preg_replace(
                     '!^(([a-z0-9]+)://[^/:]+)(:[\d]+)?!i',
-                    '\1:'. $port,
+                    '\1:' . $port,
                     $url
                 );
             }
@@ -485,28 +441,27 @@ location.replace("'.str_replace('"', '\\"', $url).'");
             }
         }
 
-        if ($protocol == 'http' && $port == 80) {
+        if ($protocol === 'http' && $port == 80) {
             unset($port);
         }
-        if ($protocol == 'https' && $port == 443) {
+        if ($protocol === 'https' && $port == 443) {
             unset($port);
         }
 
-        $server = $protocol.'://'.$host.(isset($port) ? ':'.$port : '');
+        $server = $protocol . '://' . $host . (isset($port) ? ':' . $port : '');
 
-        $uriAll = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI']
-                                                 : $_SERVER['PHP_SELF'];
+        $uriAll = $_SERVER['REQUEST_URI'] ?? $_SERVER['PHP_SELF'];
         if (false !== ($q = strpos($uriAll, '?'))) {
             $uriBase = substr($uriAll, 0, $q);
         } else {
             $uriBase = $uriAll;
         }
         if (!strlen($url) || $url{0} == '#') {
-            $url = $uriAll.$url;
-        } elseif ($url{0} == '?') {
-            $url = $uriBase.$url;
+            $url = $uriAll . $url;
+        } elseif ($url{0} === '?') {
+            $url = $uriBase . $url;
         }
-        if ($url{0} == '/') {
+        if ($url{0} === '/') {
             return $server . $url;
         }
 
@@ -519,7 +474,7 @@ location.replace("'.str_replace('"', '\\"', $url).'");
              *
              * @link http://pear.php.net/bugs/12672
              */
-            $path = dirname($uriBase.'-');
+            $path = dirname($uriBase . '-');
         }
 
         if (substr($path = strtr($path, '\\', '/'), -1) != '/') {
@@ -527,6 +482,50 @@ location.replace("'.str_replace('"', '\\"', $url).'");
         }
 
         return $server . $path . $url;
+    }
+
+    /**
+     * This function redirects the client. This is done by issuing
+     * a "Location" header and exiting if wanted.  If you set $rfc2616 to true
+     * HTTP will output a hypertext note with the location of the redirect.
+     *
+     * @param string $url URL where the redirect should go to.
+     * @param bool $exit Whether to exit immediately after redirection.
+     * @param bool $rfc2616 Wheter to output a hypertext note where we're
+     *                        redirecting to (Redirecting to
+     *                        <a href="...">...</a>.)
+     *
+     * @return boolean Returns TRUE on succes (or exits) or FALSE if headers
+     *                 have already been sent.
+     */
+    function redirect($url, $exit = true, $rfc2616 = false)
+    {
+        if (headers_sent()) {
+            return false;
+        }
+
+        $url = $this->absoluteURI($url);
+        header('Location: ' . $url);
+
+        if ($rfc2616 && isset($_SERVER['REQUEST_METHOD'])
+            && $_SERVER['REQUEST_METHOD'] != 'HEAD'
+        ) {
+            echo '
+<p>Redirecting to: <a href="' . str_replace('"', '%22', $url) . '">'
+                . htmlspecialchars($url) . '</a>.</p>
+<script type="text/javascript">
+//<![CDATA[
+if (location.replace == null) {
+    location.replace = location.assign;
+}
+location.replace("' . str_replace('"', '\\"', $url) . '");
+// ]]>
+</script>';
+        }
+        if ($exit) {
+            exit;
+        }
+        return true;
     }
 
     /**
@@ -547,7 +546,7 @@ location.replace("'.str_replace('"', '\\"', $url).'");
      */
     public function parseLinks($lines)
     {
-        $lines = (array) $lines;
+        $lines = (array)$lines;
         $extracted = array();
 
         foreach ($lines as $line) {
@@ -560,8 +559,10 @@ location.replace("'.str_replace('"', '\\"', $url).'");
                 if ($line{$pos} == ',') {
                     ++$pos;
                     continue;
-                } else if ($line{$pos} != '<') {
-                    break;
+                } else {
+                    if ($line{$pos} != '<') {
+                        break;
+                    }
                 }
                 $end = strpos($line, '>', $pos + 1);
                 if ($end === false) {
@@ -576,8 +577,10 @@ location.replace("'.str_replace('"', '\\"', $url).'");
                         $link = array();
                         ++$pos;
                         continue;
-                    } else if ($line{$pos} != ';') {
-                        break;
+                    } else {
+                        if ($line{$pos} != ';') {
+                            break;
+                        }
                     }
 
                     ++$pos;
@@ -587,7 +590,7 @@ location.replace("'.str_replace('"', '\\"', $url).'");
                     }
                     $pname = trim(substr($line, $pos, $end - $pos));
                     $pos = $end + 1;
-                    
+
                     $rest = trim(substr($line, $pos));
                     if ($rest{0} == '"') {
                         $pos = strpos($line, '"', $pos) + 1;
@@ -599,12 +602,16 @@ location.replace("'.str_replace('"', '\\"', $url).'");
                         $end2 = strpos($line, ',', $pos + 1);
                         if ($end1 === false && $end2 === false) {
                             $end = $len;
-                        } else if ($end1 === false) {
-                            $end = $end2;
-                        } else if ($end2 === false) {
-                            $end = $end1;
                         } else {
-                            $end = $end1 < $end2 ? $end1 : $end2;
+                            if ($end1 === false) {
+                                $end = $end2;
+                            } else {
+                                if ($end2 === false) {
+                                    $end = $end1;
+                                } else {
+                                    $end = $end1 < $end2 ? $end1 : $end2;
+                                }
+                            }
                         }
                         $pval = trim(substr($line, $pos, $end - $pos));
                         $pos = $end;
@@ -616,18 +623,24 @@ location.replace("'.str_replace('"', '\\"', $url).'");
                         }
                         list($charset, $lang, $val) = $parts;
                         $link[$pname][$lang] = $this->convertCharset(
-                            $charset, 'utf-8', urldecode($val)
+                            $charset,
+                            'utf-8',
+                            urldecode($val)
                         );
-                    } else if ($pname == 'rel' || $pname == 'rev') {
-                        if (!isset($link[$pname])) {
-                            $link[$pname] = array();
+                    } else {
+                        if ($pname == 'rel' || $pname == 'rev') {
+                            if (!isset($link[$pname])) {
+                                $link[$pname] = array();
+                            }
+                            $link[$pname] = array_merge(
+                                $link[$pname],
+                                array_map('trim', explode(' ', $pval))
+                            );
+                        } else {
+                            if (!isset($link[$pname])) {
+                                $link[$pname] = $pval;
+                            }
                         }
-                        $link[$pname] = array_merge(
-                            $link[$pname],
-                            array_map('trim', explode(' ', $pval))
-                        );
-                    } else if (!isset($link[$pname])) {
-                        $link[$pname] = $pval;
                     }
                     if ($end >= $len || $line{$end} == ',') {
                         break;
@@ -647,8 +660,8 @@ location.replace("'.str_replace('"', '\\"', $url).'");
      * Uses mb_convert_encoding or iconv if available.
      *
      * @param string $from Source charset the string is in
-     * @param string $to   Target character set
-     * @param string $str  String to convert
+     * @param string $to Target character set
+     * @param string $str String to convert
      *
      * @return string converted string
      */
@@ -656,10 +669,11 @@ location.replace("'.str_replace('"', '\\"', $url).'");
     {
         if (function_exists('mb_convert_encoding')) {
             return mb_convert_encoding($str, $to, $from);
-        } else if (function_exists('iconv')) {
-            return iconv($from, $to, $str);
+        } else {
+            if (function_exists('iconv')) {
+                return iconv($from, $to, $str);
+            }
         }
         return $str;
     }
 }
-?>

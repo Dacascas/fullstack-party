@@ -1,6 +1,6 @@
 <?php
 
-namespace Tesonet\Controller;
+namespace Controller;
 
 use Symfony\Component\HttpFoundation\JsonResponse;
 
@@ -21,7 +21,7 @@ class PingController
     /**
      * @return JsonResponse
      */
-    public function pingAction()
+    public function pingAction(): JsonResponse
     {
         return new JsonResponse($this->versioningInfo);
     }

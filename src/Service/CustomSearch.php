@@ -1,9 +1,15 @@
 <?php
+declare(strict_types=1);
 
-namespace Tesonet\Service;
+namespace Service;
 
 use Github\Api\AbstractApi;
+use Psr\Http\Message\ResponseInterface;
 
+/**
+ * Class CustomSearch
+ * @package Service
+ */
 class CustomSearch extends AbstractApi
 {
     /**
@@ -12,14 +18,14 @@ class CustomSearch extends AbstractApi
      */
     public function issues($filter)
     {
-        return $this->get("/search/issues?q=" . $filter);
+        return $this->get('/search/issues?q=' . $filter);
     }
 
     /**
      * @param $filter
-     * @return \Psr\Http\Message\ResponseInterface
+     * @return ResponseInterface
      */
-    public function issueHead($filter, $params)
+    public function issueHead($filter, $params): ResponseInterface
     {
         return $this->head($filter, $params)->getHeader('Link');
     }

@@ -1,6 +1,8 @@
 <?php
 
-namespace Tesonet\Service;
+declare(strict_types=1);
+
+namespace Service;
 
 use Github\Client;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -33,7 +35,7 @@ class GitHub
             $this->client->authenticate($token->getCredentials(), null, Client::AUTH_HTTP_TOKEN);
         }
 
-        $this->user = $token->getUser() == 'anon.' ? true : $this->client->api('currentUser')->show()['login'];
+        $this->user = $token->getUser() === 'anon.' ? true : $this->client->api('currentUser')->show()['login'];
     }
 
     /**
@@ -48,7 +50,7 @@ class GitHub
      * @param int $repoId
      * @return array
      */
-    public function getRepoInfo($repoId)
+    public function getRepoInfo(int $repoId): array
     {
         return $this->client->repo($repoId)->showById($repoId);
     }
@@ -59,23 +61,27 @@ class GitHub
      * @param int $page
      * @return array
      */
-    public function getRepoIssueInfo($repoName, $user = '', $page)
+    public function getRepoIssueInfo(string $repoName, string $user, int $page): array
     {
-        $userQuery = isset($user) ? $user : $this->user;
-
-        return $this->client->issues()->all($userQuery, $repoName, ['page' => $page]);
+        return $this->client->issues()->all($user ?? $this->user, $repoName, ['page' => $page]);
     }
 
     /**
      * @param string $repoName
+     * @param string $user
+     * @param $params
      * @return array
      */
-    public function getIssueHeader($repoName, $user = '', $params)
+    public function getIssueHeader(string $repoName, string $user, $params): array
     {
-        $userQuery = isset($user) ? $user : $this->user;
+        $userQuery = \rawurlencode($user ?? $this->user);
 
         return (new CustomSearch($this->client))->issueHead(
-            '/repos/' . rawurlencode($userQuery) . '/' . rawurlencode($repoName) . '/issues', array_merge(array('page' => 1), $params)
+            '/repos/' . $userQuery . '/' . rawurlencode($repoName) . '/issues',
+            \array_merge(
+                ['page' => 1],
+                $params
+            )
         );
     }
 
@@ -83,11 +89,18 @@ class GitHub
      * @param string $repoName
      * @return array
      */
-    public function getCloseIssueCount($repoName)
+    public function getCloseIssueCount(string $repoName): array
     {
-        $url = 'repo%3A' . $repoName . '+is%3Aclosed+is%3Aissue';
+        return (new CustomSearch($this->client))->issues($this->getFilter($repoName))['total_count'];
+    }
 
-        return (new CustomSearch($this->client))->issues($url)['total_count'];
+    /**
+     * @param string $repoName
+     * @return string
+     */
+    private function getFilter(string $repoName): string
+    {
+        return 'repo%3A' . $repoName . '+is%3Aclosed+is%3Aissue';
     }
 
     /**
@@ -96,11 +109,9 @@ class GitHub
      * @param int $issueId
      * @return array
      */
-    public function getIssueData($repoName, $user = '', $issueId)
+    public function getIssueData(string $repoName, string $user, int $issueId): array
     {
-        $userQuery = isset($user) ? $user : $this->user;
-
-        return $this->client->issues()->show($userQuery, $repoName, $issueId);
+        return $this->client->issues()->show($user ?? $this->user, $repoName, $issueId);
     }
 
     /**
@@ -109,10 +120,8 @@ class GitHub
      * @param int $issueId
      * @return array
      */
-    public function getIssueComments($repoName, $user = '', $issueId)
+    public function getIssueComments(string $repoName, string $user, int $issueId): array
     {
-        $userQuery = isset($user) ? $user : $this->user;
-
-        return $this->client->issues()->comments()->all($userQuery, $repoName, $issueId);
+        return $this->client->issues()->comments()->all($user ?? $this->user, $repoName, $issueId);
     }
 }

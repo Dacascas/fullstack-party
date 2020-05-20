@@ -9,8 +9,8 @@ return array_merge($mainConfig, [
     'log.level' => Logger::DEBUG,
     'cache_dir' => __DIR__ . '/../var/cache/dev',
 
-    'tesonet.api_versioning' => [
-        'product' => 'Tesonet test task',
+    'github_reader.api_versioning' => [
+        'product' => 'Github reader',
         'environment' => 'dev'
     ]
 ]);

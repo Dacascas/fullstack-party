@@ -1,8 +1,13 @@
 <?php
+declare(strict_types=1);
 
-namespace Tesonet\Service;
+namespace Service;
 
-class GitHubPagianator
+/**
+ * Class GitHubPaginator
+ * @package Service
+ */
+class GitHubPaginator
 {
     /**
      * @var int
@@ -15,7 +20,7 @@ class GitHubPagianator
     private $headerLink;
 
     /**
-     * GitHubPagianator constructor.
+     * GitHubPaginator constructor.
      * @param array $headers
      */
     public function __construct(array $headers, $current)
